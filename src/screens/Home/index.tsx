@@ -1,11 +1,36 @@
 import React from 'react';
 
 import {Text, TextInput, View} from 'react-native';
-import {atom, selector, useRecoilState, useRecoilValue} from 'recoil';
+import {
+  AtomEffect,
+  DefaultValue,
+  atom,
+  selector,
+  useRecoilState,
+  useRecoilValue,
+} from 'recoil';
+import Button from '../../components/Button';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const localForageEffect: AtomEffect<any> = ({node, setSelf, onSet}) => {
+  AsyncStorage.getItem(node.key).then(
+    savedValue => {
+      setSelf(savedValue != null ? JSON.parse(savedValue) : new DefaultValue());
+    }, // Abort initialization if no value was stored
+  );
+
+  // Subscribe to state changes and persist them to AsyncStorage
+  onSet((newValue, _, isReset) => {
+    isReset
+      ? AsyncStorage.removeItem(node.key)
+      : AsyncStorage.setItem(node.key, JSON.stringify(newValue));
+  });
+};
 
 const textState = atom({
   key: 'inputText', // unique ID (with respect to other atoms/selectors)
   default: '', // default value (aka initial value)
+  effects: [localForageEffect],
 });
 
 const charCountState = selector({
@@ -47,6 +72,8 @@ export const HomeScreen: React.FC = () => {
         backgroundColor: 'pink',
       }}>
       <Counter />
+
+      <Button />
     </View>
   );
 };
